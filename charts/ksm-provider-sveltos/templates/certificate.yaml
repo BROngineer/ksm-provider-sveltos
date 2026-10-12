@@ -1,0 +1,25 @@
+{{- if .Values.tls.certManager }}
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: {{ include "ksm-provider-sveltos.fullname" . }}-selfsigned
+  labels:
+    {{- include "ksm-provider-sveltos.labels" . | nindent 4 }}
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "ksm-provider-sveltos.fullname" . }}
+  labels:
+    {{- include "ksm-provider-sveltos.labels" . | nindent 4 }}
+spec:
+  secretName: {{ include "ksm-provider-sveltos.tlsSecretName" . }}
+  dnsNames:
+    - {{ include "ksm-provider-sveltos.fullname" . }}.{{ .Release.Namespace }}.svc
+    - {{ include "ksm-provider-sveltos.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: {{ include "ksm-provider-sveltos.fullname" . }}-selfsigned
+{{- end }}

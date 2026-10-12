@@ -1,0 +1,57 @@
+image:
+  repository: ghcr.io/brongineer/ksm-provider-sveltos
+  # Defaults to the chart appVersion.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+replicaCount: 1
+
+# Name kcm matches against ServiceSet.spec.provider.name. It must be on kcm's registry
+# allow-list together with this chart's ServiceAccount.
+providerName: ksm-projectsveltos
+
+# kcm system namespace: Region kubeconfig Secrets are read from there.
+systemNamespace: kcm-system
+
+# namespace/name of the kcm ServiceAccount allowed to call the adapter.
+kcmServiceAccount: kcm-system/kcm-controller-manager
+
+registry:
+  url: https://kcm-ksm-registry.kcm-system.svc:8443
+  # Secret holding the CA that verifies the registry. Empty name uses the system roots.
+  caSecret:
+    name: ""
+    key: ca.crt
+
+heartbeatInterval: 10s
+# Per-call timeout announced to kcm. Empty leaves the registry default (30s).
+providerTimeout: ""
+
+leaderElect: true
+
+# Renews tokens of the management SveltosCluster, as kcm's --enable-sveltos-expire-ctrl did.
+enableSveltosExpireCtrl: false
+
+service:
+  port: 9443
+
+tls:
+  # Issue the serving certificate with cert-manager (self-signed). Disable to bring your own
+  # Secret with tls.crt, tls.key and ca.crt.
+  certManager: true
+  secretName: ""
+
+logLevel: info
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    memory: 512Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

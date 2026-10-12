@@ -1,0 +1,100 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "ksm-provider-sveltos.fullname" . }}
+  labels:
+    {{- include "ksm-provider-sveltos.labels" . | nindent 4 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "ksm-provider-sveltos.fullname" . }}
+  labels:
+    {{- include "ksm-provider-sveltos.labels" . | nindent 4 }}
+rules:
+  # ServiceSets and everything they reference.
+  - apiGroups: [k0rdent.mirantis.com]
+    resources: [servicesets, servicetemplates, clusterdeployments, credentials, regions]
+    verbs: [get, list, watch]
+  - apiGroups: [source.toolkit.fluxcd.io]
+    resources: [helmcharts, helmrepositories, gitrepositories]
+    verbs: [get, list, watch]
+  # Region kubeconfigs and valuesFrom sources.
+  - apiGroups: [""]
+    resources: [secrets, configmaps]
+    verbs: [get, list, watch]
+  # Provider objects in the management cluster (regional clusters use their kubeconfig's identity).
+  - apiGroups: [config.projectsveltos.io]
+    resources: [profiles, clusterprofiles]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [config.projectsveltos.io]
+    resources: [clustersummaries, clusterconfigurations]
+    verbs: [get, list, watch]
+  - apiGroups: [cluster.x-k8s.io]
+    resources: [clusters]
+    verbs: [get, list, watch]
+  - apiGroups: [lib.projectsveltos.io]
+    resources: [sveltosclusters]
+    verbs: [get, list, watch{{ if .Values.enableSveltosExpireCtrl }}, update, patch{{ end }}]
+  {{- if .Values.enableSveltosExpireCtrl }}
+  - apiGroups: [lib.projectsveltos.io]
+    resources: [sveltosclusters/status]
+    verbs: [update, patch]
+  - apiGroups: [""]
+    resources: [serviceaccounts/token]
+    verbs: [create]
+  {{- end }}
+  # State-change notifications on ServiceSets.
+  - apiGroups: [""]
+    resources: [events]
+    verbs: [create, patch]
+  # Authenticating kcm's calls.
+  - apiGroups: [authentication.k8s.io]
+    resources: [tokenreviews]
+    verbs: [create]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "ksm-provider-sveltos.fullname" . }}
+  labels:
+    {{- include "ksm-provider-sveltos.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "ksm-provider-sveltos.fullname" . }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "ksm-provider-sveltos.fullname" . }}
+    namespace: {{ .Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "ksm-provider-sveltos.fullname" . }}
+  labels:
+    {{- include "ksm-provider-sveltos.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [coordination.k8s.io]
+    resources: [leases]
+    verbs: [get, list, watch, create, update, patch, delete]
+  # DeploymentScaledToZero on shutdown.
+  - apiGroups: [apps]
+    resources: [deployments]
+    resourceNames: [{{ include "ksm-provider-sveltos.fullname" . }}]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "ksm-provider-sveltos.fullname" . }}
+  labels:
+    {{- include "ksm-provider-sveltos.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "ksm-provider-sveltos.fullname" . }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "ksm-provider-sveltos.fullname" . }}
+    namespace: {{ .Release.Namespace }}

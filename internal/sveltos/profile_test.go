@@ -29,9 +29,12 @@ import (
 	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	clusterapiv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	"github.com/brongineer/ksm-provider-sveltos/internal/scheme"
 )
@@ -49,8 +52,50 @@ func newTestAdapter(t *testing.T, objs ...client.Object) (*Adapter, client.Clien
 	t.Helper()
 	s, err := scheme.Management()
 	require.NoError(t, err)
-	c := fake.NewClientBuilder().WithScheme(s).WithObjects(objs...).Build()
+	mapper := restMapperFor(s)
+	c := &comparableClient{fake.NewClientBuilder().
+		WithScheme(s).
+		WithRESTMapper(mapper).
+		WithObjects(objs...).
+		WithInterceptorFuncs(interceptor.Funcs{Get: clusterScopedGet(s, mapper)}).
+		Build()}
 	return &Adapter{Client: c, SystemNamespace: testSystemNamespace, timeFunc: func() time.Time { return testNow }}, c
+}
+
+// comparableClient exists because the code compares clients (rgnClient == r.Client) and the
+// interceptor client is an uncomparable struct value; real clients are pointers.
+type comparableClient struct {
+	client.WithWatch
+}
+
+// clusterScopedGet drops the key's namespace for cluster-scoped kinds, as the real client does
+// (it builds the URL with NamespaceIfScoped) but the fake client does not.
+func clusterScopedGet(s *runtime.Scheme, mapper apimeta.RESTMapper) func(context.Context, client.WithWatch, client.ObjectKey, client.Object, ...client.GetOption) error {
+	return func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+		if namespaced, err := apiutil.IsObjectNamespaced(obj, s, mapper); err == nil && !namespaced {
+			key.Namespace = ""
+		}
+		return c.Get(ctx, key, obj, opts...)
+	}
+}
+
+// restMapperFor gives cluster-scoped kinds their real scope: the fake client's default mapper
+// treats every kind as namespaced, which breaks lookups of e.g. ClusterProfile by ServiceSet key.
+func restMapperFor(s *runtime.Scheme) apimeta.RESTMapper {
+	clusterScoped := map[string]bool{
+		addoncontrollerv1beta1.ClusterProfileKind: true,
+		kcmv1.RegionKind: true,
+		"Namespace":      true,
+	}
+	mapper := apimeta.NewDefaultRESTMapper(nil)
+	for gvk := range s.AllKnownTypes() {
+		scope := apimeta.RESTScopeNamespace
+		if clusterScoped[gvk.Kind] {
+			scope = apimeta.RESTScopeRoot
+		}
+		mapper.Add(gvk, scope)
+	}
+	return mapper
 }
 
 func clusterDeploymentObjects() []client.Object {

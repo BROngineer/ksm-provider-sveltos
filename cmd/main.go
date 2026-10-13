@@ -19,6 +19,7 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -107,6 +108,9 @@ func run(cfg config) error {
 	if cfg.registryURL == "" || cfg.endpoint == "" || cfg.podNamespace == "" {
 		return errors.New("--registry-url, --endpoint and --pod-namespace (or POD_NAMESPACE) are required")
 	}
+	if err := validateEndpoint(cfg.endpoint, cfg.insecure); err != nil {
+		return err
+	}
 	kcmNamespace, kcmName, ok := strings.Cut(cfg.kcmServiceAccount, "/")
 	if !ok {
 		return fmt.Errorf("--kcm-service-account must be namespace/name, got %q", cfg.kcmServiceAccount)
@@ -158,6 +162,7 @@ func run(cfg config) error {
 		Addr:     cfg.listenAddress,
 		CertFile: cfg.tlsCertFile,
 		KeyFile:  cfg.tlsKeyFile,
+		Insecure: cfg.insecure,
 		Logger:   logger,
 	}); err != nil {
 		return fmt.Errorf("add provider server: %w", err)
@@ -167,9 +172,12 @@ func run(cfg config) error {
 	if err != nil {
 		return err
 	}
-	endpointCA, err := readOptionalFile(cfg.endpointCAFile)
-	if err != nil {
-		return err
+	// A plain-HTTP endpoint has no certificate to verify, so no CA is announced.
+	var endpointCA []byte
+	if !cfg.insecure {
+		if endpointCA, err = readOptionalFile(cfg.endpointCAFile); err != nil {
+			return err
+		}
 	}
 	heartbeater, err := registryclient.NewHeartbeater(registryclient.Config{
 		RegistryURL:      cfg.registryURL,
@@ -211,6 +219,17 @@ func run(cfg config) error {
 // validateEndpoint rejects an endpoint whose scheme does not match the serving mode: kcm calls the
 // announced URL as is, so a mismatch fails every call instead of failing at startup.
 func validateEndpoint(endpoint string, insecure bool) error {
+	u, err := url.Parse(endpoint)
+	if err != nil || u.Host == "" {
+		return fmt.Errorf("--endpoint %q must be an absolute URL", endpoint)
+	}
+	want := "https"
+	if insecure {
+		want = "http"
+	}
+	if u.Scheme != want {
+		return fmt.Errorf("--endpoint %q must use %s with --insecure=%v", endpoint, want, insecure)
+	}
 	return nil
 }
 

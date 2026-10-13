@@ -70,6 +70,7 @@ ksm:
 | `tls.insecure` | `--insecure` | `true` | plain HTTP, no certificate; **testing and demos only**, see [below](#insecure-mode-default) |
 | `service.port` | — | `9443` | Service port of the provider API |
 | `logLevel` | `--zap-log-level` | `info` | log level |
+| `fullnameOverride` | — | empty (release name) | name of every object, incl. the ServiceAccount kcm's allow-list refers to; kcm sets `ksm-provider-sveltos` when shipping the adapter as a subchart |
 | `image.*`, `resources`, `nodeSelector`, `tolerations`, `affinity` | — | | usual Deployment settings |
 
 Fixed by the chart: `--endpoint` (the Service URL, `http://` with

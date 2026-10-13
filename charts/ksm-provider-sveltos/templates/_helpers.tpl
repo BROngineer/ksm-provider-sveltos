@@ -1,5 +1,5 @@
 {{- define "ksm-provider-sveltos.fullname" -}}
-{{- printf "%s" .Release.Name | trunc 63 | trimSuffix "-" -}}
+{{- default .Release.Name .Values.fullnameOverride | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
 {{- define "ksm-provider-sveltos.labels" -}}

@@ -1,10 +1,14 @@
 image:
   repository: ghcr.io/brongineer/ksm-provider-sveltos
   # Defaults to the chart appVersion.
-  tag: "v0.1.1"
+  tag: "v0.1.2"
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
+
+# Names all objects; defaults to the release name. Set it when installed as a subchart, where the
+# release name belongs to the parent chart.
+fullnameOverride: ""
 
 replicaCount: 1
 

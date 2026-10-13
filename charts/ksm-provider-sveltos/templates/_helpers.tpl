@@ -23,5 +23,6 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 
 {{- define "ksm-provider-sveltos.endpoint" -}}
-{{- printf "https://%s.%s.svc:%v" (include "ksm-provider-sveltos.fullname" .) .Release.Namespace .Values.service.port -}}
+{{- $scheme := ternary "http" "https" .Values.tls.insecure -}}
+{{- printf "%s://%s.%s.svc:%v" $scheme (include "ksm-provider-sveltos.fullname" .) .Release.Namespace .Values.service.port -}}
 {{- end -}}

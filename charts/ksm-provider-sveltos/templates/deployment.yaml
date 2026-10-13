@@ -33,6 +33,9 @@ spec:
             - --deployment-name={{ include "ksm-provider-sveltos.fullname" . }}
             - --kcm-service-account={{ .Values.kcmServiceAccount }}
             - --endpoint={{ include "ksm-provider-sveltos.endpoint" . }}
+            {{- if .Values.tls.insecure }}
+            - --insecure
+            {{- end }}
             - --registry-url={{ required "registry.url is required" .Values.registry.url }}
             {{- if .Values.registry.caSecret.name }}
             - --registry-ca-file=/etc/ksm-registry/ca/{{ .Values.registry.caSecret.key }}
@@ -73,9 +76,11 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
+            {{- if not .Values.tls.insecure }}
             - name: tls
               mountPath: /etc/ksm-provider/tls
               readOnly: true
+            {{- end }}
             - name: registry-token
               mountPath: /var/run/secrets/ksm/registry
               readOnly: true
@@ -85,9 +90,11 @@ spec:
               readOnly: true
             {{- end }}
       volumes:
+        {{- if not .Values.tls.insecure }}
         - name: tls
           secret:
             secretName: {{ include "ksm-provider-sveltos.tlsSecretName" . }}
+        {{- end }}
         - name: registry-token
           projected:
             sources:

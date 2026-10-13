@@ -38,6 +38,10 @@ service:
   port: 9443
 
 tls:
+  # Serve the provider API over plain HTTP, without any certificate. TESTING AND DEMOS ONLY:
+  # bearer tokens travel in clear text and can be replayed by anyone on the pod network.
+  # When true, certManager and secretName are ignored.
+  insecure: false
   # Issue the serving certificate with cert-manager (self-signed). Disable to bring your own
   # Secret with tls.crt, tls.key and ca.crt.
   certManager: true

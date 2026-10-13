@@ -1,0 +1,6 @@
+apiVersion: v2
+name: ksm-provider-sveltos
+description: k0rdent state management provider adapter for ProjectSveltos
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

@@ -1,0 +1,122 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ksm-provider-sveltos.fullname" . }}
+  labels:
+    {{- include "ksm-provider-sveltos.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "ksm-provider-sveltos.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "ksm-provider-sveltos.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "ksm-provider-sveltos.fullname" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: manager
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - --provider-name={{ .Values.providerName }}
+            - --system-namespace={{ .Values.systemNamespace }}
+            - --deployment-name={{ include "ksm-provider-sveltos.fullname" . }}
+            - --kcm-service-account={{ .Values.kcmServiceAccount }}
+            - --endpoint={{ include "ksm-provider-sveltos.endpoint" . }}
+            {{- if .Values.tls.insecure }}
+            - --insecure
+            {{- end }}
+            - --registry-url={{ required "registry.url is required" .Values.registry.url }}
+            {{- if .Values.registry.caSecret.name }}
+            - --registry-ca-file=/etc/ksm-registry/ca/{{ .Values.registry.caSecret.key }}
+            {{- end }}
+            - --heartbeat-interval={{ .Values.heartbeatInterval }}
+            {{- if .Values.providerTimeout }}
+            - --provider-timeout={{ .Values.providerTimeout }}
+            {{- end }}
+            - --leader-elect={{ .Values.leaderElect }}
+            - --enable-sveltos-expire-ctrl={{ .Values.enableSveltosExpireCtrl }}
+            - --zap-log-level={{ .Values.logLevel }}
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          ports:
+            - name: provider-api
+              containerPort: 9443
+              protocol: TCP
+            - name: metrics
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8081
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            {{- if not .Values.tls.insecure }}
+            - name: tls
+              mountPath: /etc/ksm-provider/tls
+              readOnly: true
+            {{- end }}
+            - name: registry-token
+              mountPath: /var/run/secrets/ksm/registry
+              readOnly: true
+            {{- if .Values.registry.caSecret.name }}
+            - name: registry-ca
+              mountPath: /etc/ksm-registry/ca
+              readOnly: true
+            {{- end }}
+      volumes:
+        {{- if not .Values.tls.insecure }}
+        - name: tls
+          secret:
+            secretName: {{ include "ksm-provider-sveltos.tlsSecretName" . }}
+        {{- end }}
+        - name: registry-token
+          projected:
+            sources:
+              - serviceAccountToken:
+                  # auth.RegistryAudience in ksm-provider-api.
+                  audience: ksm-registry
+                  expirationSeconds: 3600
+                  path: token
+        {{- if .Values.registry.caSecret.name }}
+        - name: registry-ca
+          secret:
+            secretName: {{ .Values.registry.caSecret.name }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

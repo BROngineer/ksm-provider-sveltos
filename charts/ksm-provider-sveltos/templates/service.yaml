@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ksm-provider-sveltos.fullname" . }}
+  labels:
+    {{- include "ksm-provider-sveltos.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- include "ksm-provider-sveltos.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: provider-api
+      port: {{ .Values.service.port }}
+      targetPort: provider-api
+      protocol: TCP

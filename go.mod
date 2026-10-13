@@ -7,7 +7,7 @@ replace github.com/K0rdent/kcm => github.com/BROngineer/kcm v0.0.0-2026101210583
 require (
 	github.com/K0rdent/kcm v0.0.0-20261012105836-fd52a2d4561f
 	github.com/Masterminds/semver/v3 v3.5.0
-	github.com/brongineer/ksm-provider-api v0.1.0
+	github.com/brongineer/ksm-provider-api v0.2.0
 	github.com/fluxcd/helm-controller/api v1.6.5
 	github.com/fluxcd/pkg/apis/meta v1.32.0
 	github.com/fluxcd/source-controller/api v1.9.6

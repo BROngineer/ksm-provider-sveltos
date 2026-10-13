@@ -1,7 +1,7 @@
 image:
   repository: ghcr.io/brongineer/ksm-provider-sveltos
   # Defaults to the chart appVersion.
-  tag: ""
+  tag: "v0.1.1"
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
@@ -19,7 +19,8 @@ systemNamespace: kcm-system
 kcmServiceAccount: kcm-system/kcm-controller-manager
 
 registry:
-  url: https://kcm-ksm-registry.kcm-system.svc:8443
+  # Plain HTTP matches kcm's insecure default; use https:// with caSecret when kcm serves TLS.
+  url: http://kcm-ksm-registry.kcm-system.svc:8443
   # Secret holding the CA that verifies the registry. Empty name uses the system roots.
   caSecret:
     name: ""
@@ -40,8 +41,8 @@ service:
 tls:
   # Serve the provider API over plain HTTP, without any certificate. TESTING AND DEMOS ONLY:
   # bearer tokens travel in clear text and can be replayed by anyone on the pod network.
-  # When true, certManager and secretName are ignored.
-  insecure: false
+  # When true, certManager and secretName are ignored. Default for the PoC; set false for TLS.
+  insecure: true
   # Issue the serving certificate with cert-manager (self-signed). Disable to bring your own
   # Secret with tls.crt, tls.key and ca.crt.
   certManager: true

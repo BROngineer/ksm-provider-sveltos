@@ -11,12 +11,17 @@ Related documents:
 
 ## Installing
 
+kcm installs the adapter as a dependency of its `projectsveltos` component and
+sets `registry.url`, `systemNamespace`, `kcmServiceAccount` and `tls.insecure`
+for it. Standalone, from the published chart (insecure by default):
+
 ```sh
-helm install ksm-provider-sveltos charts/ksm-provider-sveltos \
-  --namespace projectsveltos \
-  --set registry.url=https://kcm-ksm-registry.kcm-system.svc:8443 \
-  --set registry.caSecret.name=kcm-ksm-registry-ca
+helm install ksm-provider-sveltos oci://ghcr.io/brongineer/charts/ksm-provider-sveltos \
+  --namespace projectsveltos
 ```
+
+The chart is pushed to `oci://ghcr.io/brongineer/charts` by the tag workflow:
+tag `vX.Y.Z` publishes chart version `X.Y.Z` with image tag `vX.Y.Z`.
 
 The chart creates:
 
@@ -33,8 +38,10 @@ every heartbeat; nothing has to be configured in kcm for them.
 
 ## Registering with kcm
 
-kcm accepts heartbeats only from ServiceAccounts on its allow-list. Add the
-provider name with this release's ServiceAccount to kcm's configuration:
+kcm accepts heartbeats only from ServiceAccounts on its allow-list. kcm's chart
+allows the adapter it ships (`ksm-projectsveltos` with
+`projectsveltos/ksm-provider-sveltos`) by default; for a standalone install, add
+the provider name with this release's ServiceAccount to kcm's configuration:
 
 ```yaml
 ksm:
@@ -53,14 +60,14 @@ ksm:
 | `providerName` | `--provider-name` | `ksm-projectsveltos` | name registered in kcm and matched against `ServiceSet.spec.provider.name` |
 | `systemNamespace` | `--system-namespace` | `kcm-system` | kcm system namespace; Region kubeconfig Secrets are read from there |
 | `kcmServiceAccount` | `--kcm-service-account` | `kcm-system/kcm-controller-manager` | the only caller allowed on the provider API |
-| `registry.url` | `--registry-url` | `https://kcm-ksm-registry.kcm-system.svc:8443` | kcm registry base URL; required |
+| `registry.url` | `--registry-url` | `http://kcm-ksm-registry.kcm-system.svc:8443` | kcm registry base URL; required; `https://` when kcm serves TLS |
 | `registry.caSecret.name` / `.key` | `--registry-ca-file` | empty / `ca.crt` | Secret with the CA verifying the registry; empty uses system roots |
 | `heartbeatInterval` | `--heartbeat-interval` | `10s` | at least 1s; registrations live 3 × this |
 | `providerTimeout` | `--provider-timeout` | empty | per-call timeout announced to kcm; empty leaves the registry default (30s) |
 | `leaderElect` | `--leader-elect` | `true` | leader election for heartbeater, poller and controllers |
 | `enableSveltosExpireCtrl` | `--enable-sveltos-expire-ctrl` | `false` | renew tokens of the management SveltosCluster (adds the RBAC it needs) |
 | `tls.certManager` / `tls.secretName` | `--tls-cert-file`, `--tls-key-file`, `--endpoint-ca-file` | `true` / empty | serving certificate; without cert-manager provide a Secret with `tls.crt`, `tls.key`, `ca.crt` |
-| `tls.insecure` | `--insecure` | `false` | plain HTTP, no certificate; **testing and demos only**, see [below](#testing-and-demos-insecure-mode) |
+| `tls.insecure` | `--insecure` | `true` | plain HTTP, no certificate; **testing and demos only**, see [below](#insecure-mode-default) |
 | `service.port` | — | `9443` | Service port of the provider API |
 | `logLevel` | `--zap-log-level` | `info` | log level |
 | `image.*`, `resources`, `nodeSelector`, `tolerations`, `affinity` | — | | usual Deployment settings |
@@ -70,9 +77,11 @@ Fixed by the chart: `--endpoint` (the Service URL, `http://` with
 the Downward API), the projected registry token at
 `/var/run/secrets/ksm/registry/token` with audience `ksm-registry`.
 
-## Testing and demos (insecure mode)
+## Insecure mode (default)
 
-`tls.insecure: true` serves the provider API over plain HTTP:
+`tls.insecure: true`, the default while the integration is a PoC, serves the
+provider API over plain HTTP. Set it to `false` (and point `registry.url` at
+`https://` with `registry.caSecret`) for TLS:
 
 | Changes | |
 |---|---|

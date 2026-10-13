@@ -38,27 +38,32 @@ where and what changed.
 - kcm with the provider registry enabled, and this adapter's ServiceAccount on
   its allow-list for the provider name (`ksm-projectsveltos` by default).
 - ProjectSveltos (addon-controller) v1.16.x, the version kcm ships.
-- cert-manager, unless you provide the serving certificate yourself or run in
-  insecure mode.
+- cert-manager, only when serving TLS (`tls.insecure: false`) with the
+  chart-issued certificate.
 
 ## Quick start
 
+kcm ships this adapter as part of its `projectsveltos` component and configures
+it; a standalone install is only needed outside kcm's components.
+
+The chart is published to `oci://ghcr.io/brongineer/charts/ksm-provider-sveltos`
+on every release tag. By default it runs in insecure mode, matching kcm's
+default registry (plain HTTP on both sides; **never in production**, see
+[Operations](docs/operations.md#insecure-mode-default)):
+
 ```sh
-helm install ksm-provider-sveltos charts/ksm-provider-sveltos \
-  --namespace projectsveltos \
-  --set registry.url=https://kcm-ksm-registry.kcm-system.svc:8443 \
-  --set registry.caSecret.name=kcm-ksm-registry-ca
+helm install ksm-provider-sveltos oci://ghcr.io/brongineer/charts/ksm-provider-sveltos \
+  --namespace projectsveltos
 ```
 
-For testing and demos, without any certificates (both kcm's registry and the
-adapter on plain HTTP; **never in production**, see
-[Operations](docs/operations.md#testing-and-demos-insecure-mode)):
+With TLS on both sides:
 
 ```sh
-helm install ksm-provider-sveltos charts/ksm-provider-sveltos \
+helm install ksm-provider-sveltos oci://ghcr.io/brongineer/charts/ksm-provider-sveltos \
   --namespace projectsveltos \
-  --set tls.insecure=true \
-  --set registry.url=http://kcm-ksm-registry.kcm-system.svc:8443
+  --set tls.insecure=false \
+  --set registry.url=https://kcm-ksm-registry.kcm-system.svc:8443 \
+  --set registry.caSecret.name=kcm-ksm-registry-ca
 ```
 
 Then allow the adapter in kcm (see [Operations](docs/operations.md#registering-with-kcm)).

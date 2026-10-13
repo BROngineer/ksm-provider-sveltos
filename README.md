@@ -38,7 +38,8 @@ where and what changed.
 - kcm with the provider registry enabled, and this adapter's ServiceAccount on
   its allow-list for the provider name (`ksm-projectsveltos` by default).
 - ProjectSveltos (addon-controller) v1.16.x, the version kcm ships.
-- cert-manager, unless you provide the serving certificate yourself.
+- cert-manager, unless you provide the serving certificate yourself or run in
+  insecure mode.
 
 ## Quick start
 
@@ -47,6 +48,17 @@ helm install ksm-provider-sveltos charts/ksm-provider-sveltos \
   --namespace projectsveltos \
   --set registry.url=https://kcm-ksm-registry.kcm-system.svc:8443 \
   --set registry.caSecret.name=kcm-ksm-registry-ca
+```
+
+For testing and demos, without any certificates (both kcm's registry and the
+adapter on plain HTTP; **never in production**, see
+[Operations](docs/operations.md#testing-and-demos-insecure-mode)):
+
+```sh
+helm install ksm-provider-sveltos charts/ksm-provider-sveltos \
+  --namespace projectsveltos \
+  --set tls.insecure=true \
+  --set registry.url=http://kcm-ksm-registry.kcm-system.svc:8443
 ```
 
 Then allow the adapter in kcm (see [Operations](docs/operations.md#registering-with-kcm)).

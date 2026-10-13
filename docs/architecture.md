@@ -14,7 +14,7 @@ Related documents:
 
 | Component | Code | Runs on | Role |
 |---|---|---|---|
-| Provider API server | `cmd/main.go`, `providerserver.NewHandler` + `httpserver.Server` | every replica | serves kcm's `deployServices` / `deleteServices` calls; authenticates kcm with a TokenReview (audience `ksm-provider`) |
+| Provider API server | `cmd/main.go`, `providerserver.NewHandler` + `httpserver.Server` | every replica | serves kcm's `deployServices` / `deleteServices` calls over TLS (plain HTTP with `--insecure`, for testing and demos); authenticates kcm with a TokenReview (audience `ksm-provider`) |
 | `Adapter` | `internal/sveltos/provider.go` | every replica | implements the two operations on top of the moved kcm code |
 | Heartbeater | `registryclient.Heartbeater` | leader | registers the provider in kcm's registry and keeps it alive; sends `Suspended` when the Deployment is scaled to zero |
 | ClusterSummary poller | `internal/sveltos/enqueue.go`, `setup.go` | leader, after registration | detects Sveltos-side changes and emits the ServiceSets that need a reconcile |

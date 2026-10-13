@@ -1,4 +1,4 @@
-name: "Build Image on Push"
+name: "Build Image on Merge"
 
 on:
   push:
@@ -28,5 +28,5 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: ghcr.io/brongineer/ksm-provider-sveltos:${{ github.sha }}
-          secrets: |
-            netrc=machine github.com login x-access-token password ${{ secrets.AUTOMATION_TOKEN }}
+          cache-from: type=gha,scope=ksm-provider-sveltos
+          cache-to: type=gha,mode=max,scope=ksm-provider-sveltos

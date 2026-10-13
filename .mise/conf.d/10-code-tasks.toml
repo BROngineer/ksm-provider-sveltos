@@ -1,7 +1,5 @@
 [env]
 GOLANGCI_LINT_TIMEOUT = "2m"
-# ksm-provider-api is private: fetch it directly instead of through the public proxy and checksum DB.
-GOPRIVATE = "github.com/brongineer/*,github.com/BROngineer/*"
 
 [tasks.tidy]
 description = "Run go mod tidy"

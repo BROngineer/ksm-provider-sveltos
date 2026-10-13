@@ -78,18 +78,5 @@ Tests use plain `testing`, table tests and controller-runtime's fake client; no
 API server is needed. Paths that need a real cluster (regional clients from
 kubeconfig, SveltosCluster token renewal) are left to integration tests.
 
-`ksm-provider-api` is a private module. mise sets `GOPRIVATE`; outside mise:
-
-```sh
-export GOPRIVATE='github.com/brongineer/*,github.com/BROngineer/*'
-```
-
-The image fetches it through a BuildKit secret, so the token never ends up in a
-layer:
-
-```sh
-docker build --secret id=netrc,src=$HOME/.netrc -t ksm-provider-sveltos .
-```
-
 The module builds against the kcm fork pinned in `go.mod`
 (`replace github.com/K0rdent/kcm => github.com/BROngineer/kcm …`).

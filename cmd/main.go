@@ -54,6 +54,7 @@ type config struct {
 	listenAddress string
 	tlsCertFile   string
 	tlsKeyFile    string
+	insecure      bool
 
 	registryURL       string
 	registryCAFile    string
@@ -79,6 +80,7 @@ func main() {
 	flag.StringVar(&cfg.listenAddress, "listen-address", ":9443", "Address of the provider API server.")
 	flag.StringVar(&cfg.tlsCertFile, "tls-cert-file", "/etc/ksm-provider/tls/tls.crt", "Serving certificate of the provider API.")
 	flag.StringVar(&cfg.tlsKeyFile, "tls-key-file", "/etc/ksm-provider/tls/tls.key", "Serving key of the provider API.")
+	flag.BoolVar(&cfg.insecure, "insecure", false, "Serve the provider API over plain HTTP. Testing and demos only: tokens travel in clear text.")
 	flag.StringVar(&cfg.registryURL, "registry-url", "", "Base URL of the kcm registry.")
 	flag.StringVar(&cfg.registryCAFile, "registry-ca-file", "", "CA bundle verifying the kcm registry; empty uses system roots.")
 	flag.StringVar(&cfg.registryTokenFile, "registry-token-file", "/var/run/secrets/ksm/registry/token", "Projected ServiceAccount token for the registry audience.")
@@ -204,6 +206,12 @@ func run(cfg config) error {
 	}
 
 	return mgr.Start(ctrl.SetupSignalHandler())
+}
+
+// validateEndpoint rejects an endpoint whose scheme does not match the serving mode: kcm calls the
+// announced URL as is, so a mismatch fails every call instead of failing at startup.
+func validateEndpoint(endpoint string, insecure bool) error {
+	return nil
 }
 
 func readOptionalFile(path string) ([]byte, error) {

@@ -1,4 +1,4 @@
-name: "Build Image on Tag"
+name: "Build Image and Chart on Tag"
 
 on:
   push:
@@ -30,3 +30,23 @@ jobs:
           tags: ghcr.io/brongineer/ksm-provider-sveltos:${{ github.ref_name }}
           cache-from: type=gha,scope=ksm-provider-sveltos
           cache-to: type=gha,mode=max,scope=ksm-provider-sveltos
+
+  chart:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # Chart versions are SemVer without the "v"; the app version stays the image tag.
+      - name: Package chart
+        run: helm package charts/ksm-provider-sveltos --version "${TAG#v}" --app-version "${TAG}" --destination dist
+      - name: Push chart
+        env:
+          REGISTRY_USER: ${{ github.actor }}
+          REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "${REGISTRY_PASSWORD}" | helm registry login ghcr.io --username "${REGISTRY_USER}" --password-stdin
+          helm push "dist/ksm-provider-sveltos-${TAG#v}.tgz" oci://ghcr.io/brongineer/charts

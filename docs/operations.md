@@ -32,26 +32,27 @@ The chart creates:
 | Issuer + Certificate | self-signed serving certificate via cert-manager (`tls.certManager: true`; not created in insecure mode) |
 | ServiceAccount, ClusterRole, ClusterRoleBinding | cluster-wide reads, Sveltos objects, Events, TokenReviews |
 | Role, RoleBinding | leader-election leases and `get` on the adapter's own Deployment |
+| StateManagementProvider | only with `stateManagementProvider.create`; declares the provider to kcm, see below |
 
 The endpoint and its CA (`ca.crt` of the serving Secret) are announced to kcm in
 every heartbeat; nothing has to be configured in kcm for them.
 
 ## Registering with kcm
 
-kcm accepts heartbeats only from ServiceAccounts on its allow-list. kcm's chart
-allows the adapter it ships (`ksm-projectsveltos` with
-`projectsveltos/ksm-provider-sveltos`) by default; for a standalone install, add
-the provider name with this release's ServiceAccount to kcm's configuration:
+kcm accepts heartbeats for a provider name only from the ServiceAccount the
+StateManagementProvider of that name declares in `spec.registration.serviceAccount`.
+kcm reads it on every heartbeat: creating, changing or deleting it takes effect
+without restarting kcm.
 
-```yaml
-ksm:
-  providers:
-    - name: ksm-projectsveltos
-      serviceAccount: projectsveltos/ksm-provider-sveltos
-```
+With `stateManagementProvider.create: true` the chart renders that object: named
+`providerName`, declaring this release's ServiceAccount, and filling the fields
+kcm's CRD requires (`adapter` is this Deployment, `provisioner` the Sveltos
+addon-controller, `provisionerCRDs` the Sveltos `profiles` and `clustersummaries`).
+kcm sets the value when it ships the adapter with its `projectsveltos` component.
+The CRD must have `spec.registration`, so keep the value off against older kcm.
 
-`name` must equal the chart's `providerName` and the
-`spec.provider.name` of the ServiceSets this adapter should serve.
+`providerName` must equal the `spec.provider.name` of the ServiceSets this
+adapter should serve.
 
 ## Configuration
 
@@ -70,7 +71,10 @@ ksm:
 | `tls.insecure` | `--insecure` | `true` | plain HTTP, no certificate; **testing and demos only**, see [below](#insecure-mode-default) |
 | `service.port` | — | `9443` | Service port of the provider API |
 | `logLevel` | `--zap-log-level` | `info` | log level |
-| `fullnameOverride` | — | empty (release name) | name of every object, incl. the ServiceAccount kcm's allow-list refers to; kcm sets `ksm-provider-sveltos` when shipping the adapter as a subchart |
+| `fullnameOverride` | — | empty (release name) | name of every object, incl. the ServiceAccount the StateManagementProvider declares; kcm sets `ksm-provider-sveltos` when shipping the adapter as a subchart |
+| `stateManagementProvider.create` | — | `false` | render the StateManagementProvider declaring this adapter to kcm; kcm sets it when it ships the adapter |
+| `stateManagementProvider.selector` | — | `ksm.k0rdent.mirantis.com/adapter: kcm-controller-manager` | labels kcm stamps on this provider's ServiceSets; changing them relabels every ServiceSet |
+| `stateManagementProvider.provisioner.name` / `.namespace` | — | `addon-controller` / release namespace | the Sveltos addon-controller Deployment |
 | `image.*`, `resources`, `nodeSelector`, `tolerations`, `affinity` | — | | usual Deployment settings |
 
 Fixed by the chart: `--endpoint` (the Service URL, `http://` with
@@ -124,7 +128,7 @@ registration simply expires if no replica heartbeats for 3 × `heartbeatInterval
 
 | Symptom | Check |
 |---|---|
-| ServiceSets stay unknown in kcm | Adapter logs show `heartbeat failed`? The message carries the registry's status and problem type: `403 forbidden` → allow-list entry missing or wrong ServiceAccount; `401 unauthenticated` → projected token audience is not `ksm-registry`; `503 not-leader` → transient while kcm elects a leader; TLS errors → `registry.caSecret` |
+| ServiceSets stay unknown in kcm | Adapter logs show `heartbeat failed`? The message carries the registry's status and problem type: `403 forbidden` → no StateManagementProvider named `providerName`, or its `spec.registration.serviceAccount` is not this release's ServiceAccount; `401 unauthenticated` → projected token audience is not `ksm-registry`; `503 not-leader` → transient while kcm elects a leader; TLS errors → `registry.caSecret` |
 | kcm cannot call the adapter | `401`/`403` on the adapter side: kcm's token audience must be `ksm-provider`, and kcm must run as `kcmServiceAccount`. TLS errors: the CA announced in heartbeats is the serving Secret's `ca.crt` |
 | adapter exits with `--endpoint … must use http with --insecure=true` (or `https … false`) | the endpoint scheme does not match `tls.insecure`; with the chart this only happens when overriding `--endpoint` by hand |
 | `heartbeat failed` with `http: server gave HTTP response to HTTPS client` (or a TLS handshake error against `http://`) | `registry.url`'s scheme does not match how kcm's registry is served |

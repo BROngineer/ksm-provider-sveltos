@@ -1,0 +1,13 @@
+{{- if .Values.stateManagementProvider.create }}
+apiVersion: k0rdent.mirantis.com/v1beta1
+kind: StateManagementProvider
+metadata:
+  name: {{ .Values.providerName }}
+  labels:
+    {{- include "ksm-provider-sveltos.labels" . | nindent 4 }}
+spec:
+  registration:
+    serviceAccount:
+      namespace: {{ .Release.Namespace }}
+      name: {{ include "ksm-provider-sveltos.fullname" . }}
+{{- end }}

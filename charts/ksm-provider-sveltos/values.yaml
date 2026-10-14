@@ -12,9 +12,14 @@ fullnameOverride: ""
 
 replicaCount: 1
 
-# Name kcm matches against ServiceSet.spec.provider.name. It must be on kcm's registry
-# allow-list together with this chart's ServiceAccount.
+# Name kcm matches against ServiceSet.spec.provider.name. The StateManagementProvider of this
+# name declares which ServiceAccount may register it with kcm's registry.
 providerName: ksm-projectsveltos
+
+# StateManagementProvider declaring this adapter's ServiceAccount to kcm. kcm sets create when it
+# installs the adapter: the object needs kcm's CRD with spec.registration.
+stateManagementProvider:
+  create: false
 
 # kcm system namespace: Region kubeconfig Secrets are read from there.
 systemNamespace: kcm-system

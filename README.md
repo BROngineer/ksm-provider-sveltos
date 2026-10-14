@@ -35,8 +35,9 @@ where and what changed.
 
 ## Requirements
 
-- kcm with the provider registry enabled, and this adapter's ServiceAccount on
-  its allow-list for the provider name (`ksm-projectsveltos` by default).
+- kcm with the provider registry, and a StateManagementProvider named like the
+  provider (`ksm-projectsveltos` by default) declaring this adapter's
+  ServiceAccount; the chart renders it with `stateManagementProvider.create`.
 - ProjectSveltos (addon-controller) v1.16.x, the version kcm ships.
 - cert-manager, only when serving TLS (`tls.insecure: false`) with the
   chart-issued certificate.

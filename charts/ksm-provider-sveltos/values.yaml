@@ -16,19 +16,10 @@ replicaCount: 1
 # name declares which ServiceAccount may register it with kcm's registry.
 providerName: ksm-projectsveltos
 
-# StateManagementProvider declaring this adapter to kcm. kcm sets create when it installs the
-# adapter: the object needs kcm's CRD with spec.registration.
+# StateManagementProvider declaring this adapter's ServiceAccount to kcm. kcm sets create when it
+# installs the adapter: the object needs kcm's CRD with spec.registration.
 stateManagementProvider:
   create: false
-  # ServiceSets of this provider carry these labels; keep them stable, changing them relabels
-  # every ServiceSet.
-  selector:
-    ksm.k0rdent.mirantis.com/adapter: kcm-controller-manager
-  # Sveltos addon-controller, which reconciles the Profiles this adapter writes.
-  provisioner:
-    name: addon-controller
-    # Defaults to the release namespace.
-    namespace: ""
 
 # kcm system namespace: Region kubeconfig Secrets are read from there.
 systemNamespace: kcm-system

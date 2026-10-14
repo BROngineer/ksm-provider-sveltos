@@ -45,10 +45,9 @@ kcm reads it on every heartbeat: creating, changing or deleting it takes effect
 without restarting kcm.
 
 With `stateManagementProvider.create: true` the chart renders that object: named
-`providerName`, declaring this release's ServiceAccount, and filling the fields
-kcm's CRD requires (`adapter` is this Deployment, `provisioner` the Sveltos
-addon-controller, `provisionerCRDs` the Sveltos `profiles` and `clustersummaries`).
-kcm sets the value when it ships the adapter with its `projectsveltos` component.
+`providerName`, with only `spec.registration` declaring this release's
+ServiceAccount. kcm sets the value when it ships the adapter with its
+`projectsveltos` component.
 The CRD must have `spec.registration`, so keep the value off against older kcm.
 
 `providerName` must equal the `spec.provider.name` of the ServiceSets this
@@ -73,8 +72,6 @@ adapter should serve.
 | `logLevel` | `--zap-log-level` | `info` | log level |
 | `fullnameOverride` | — | empty (release name) | name of every object, incl. the ServiceAccount the StateManagementProvider declares; kcm sets `ksm-provider-sveltos` when shipping the adapter as a subchart |
 | `stateManagementProvider.create` | — | `false` | render the StateManagementProvider declaring this adapter to kcm; kcm sets it when it ships the adapter |
-| `stateManagementProvider.selector` | — | `ksm.k0rdent.mirantis.com/adapter: kcm-controller-manager` | labels kcm stamps on this provider's ServiceSets; changing them relabels every ServiceSet |
-| `stateManagementProvider.provisioner.name` / `.namespace` | — | `addon-controller` / release namespace | the Sveltos addon-controller Deployment |
 | `image.*`, `resources`, `nodeSelector`, `tolerations`, `affinity` | — | | usual Deployment settings |
 
 Fixed by the chart: `--endpoint` (the Service URL, `http://` with

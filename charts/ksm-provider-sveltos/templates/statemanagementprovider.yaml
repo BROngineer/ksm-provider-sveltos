@@ -1,0 +1,35 @@
+{{- if .Values.stateManagementProvider.create }}
+{{- $readiness := "self.status.availableReplicas == self.status.replicas &&\nself.status.availableReplicas == self.status.updatedReplicas &&\nself.status.availableReplicas == self.status.readyReplicas" }}
+apiVersion: k0rdent.mirantis.com/v1beta1
+kind: StateManagementProvider
+metadata:
+  name: {{ .Values.providerName }}
+  labels:
+    {{- include "ksm-provider-sveltos.labels" . | nindent 4 }}
+spec:
+  registration:
+    serviceAccount:
+      namespace: {{ .Release.Namespace }}
+      name: {{ include "ksm-provider-sveltos.fullname" . }}
+  selector:
+    matchLabels:
+      {{- toYaml .Values.stateManagementProvider.selector | nindent 6 }}
+  adapter:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "ksm-provider-sveltos.fullname" . }}
+    namespace: {{ .Release.Namespace }}
+    readinessRule: {{ $readiness | quote }}
+  provisioner:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: {{ .Values.stateManagementProvider.provisioner.name }}
+      namespace: {{ .Values.stateManagementProvider.provisioner.namespace | default .Release.Namespace }}
+      readinessRule: {{ $readiness | quote }}
+  provisionerCRDs:
+    - group: config.projectsveltos.io
+      version: v1beta1
+      resources:
+        - profiles
+        - clustersummaries
+{{- end }}

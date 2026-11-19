@@ -228,6 +228,80 @@ func TestEnsureProfileBuildsHelmChartFromHelmRepository(t *testing.T) {
 	assert.Empty(t, ss.Status.Services[0].Version, "the verifier owns Version for Helm services")
 }
 
+func gitRepositoryHelmTemplate(name, chartPath string) *kcmv1.ServiceTemplate {
+	return &kcmv1.ServiceTemplate{
+		Name: name, Namespace: testNamespace,
+		Spec: kcmv1.ServiceTemplateSpec{
+			Helm: &kcmv1.HelmSpec{
+				ChartSource: &kcmv1.SourceSpec{
+					RemoteSourceSpec: &kcmv1.RemoteSourceSpec{Git: &kcmv1.EmbeddedGitRepositorySpec{}},
+					Path:             chartPath,
+				},
+			},
+		},
+		Status: kcmv1.ServiceTemplateStatus{
+			TemplateStatusCommon: kcmv1.TemplateStatusCommon{Valid: true},
+			SourceStatus:         &kcmv1.SourceStatus{Kind: sourcev1.GitRepositoryKind, Name: "podinfo-src", Namespace: testNamespace},
+		},
+	}
+}
+
+func TestEnsureProfileBuildsHelmChartFromGitRepository(t *testing.T) {
+	tests := []struct {
+		name          string
+		path          string
+		wantURL       string
+		wantChartName string
+	}{
+		{
+			name:          "nested path",
+			path:          "charts/podinfo",
+			wantURL:       "GitRepository://team-a/podinfo-src/charts/podinfo",
+			wantChartName: "podinfo",
+		},
+		{
+			name:          "relative path with trailing slash",
+			path:          "./charts/podinfo/",
+			wantURL:       "GitRepository://team-a/podinfo-src/charts/podinfo/",
+			wantChartName: "podinfo",
+		},
+		{
+			name:          "repository root",
+			path:          ".",
+			wantURL:       "GitRepository://team-a/podinfo-src/",
+			wantChartName: "podinfo-6-5-0",
+		},
+		{
+			name:          "empty path",
+			path:          "",
+			wantURL:       "GitRepository://team-a/podinfo-src/",
+			wantChartName: "podinfo-6-5-0",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			objs := append(clusterDeploymentObjects(), gitRepositoryHelmTemplate("podinfo-6-5-0", tt.path))
+			a, c := newTestAdapter(t, objs...)
+			ss := serviceSetFor(kcmv1.ServiceWithValues{Name: "podinfo", Namespace: "podinfo", Template: "podinfo-6-5-0", Values: "replicaCount: 2"})
+
+			require.NoError(t, a.ensureProfile(context.Background(), c, ss))
+
+			profile := new(addoncontrollerv1beta1.Profile)
+			require.NoError(t, c.Get(context.Background(), client.ObjectKeyFromObject(ss), profile))
+			require.Len(t, profile.Spec.HelmCharts, 1)
+			chart := profile.Spec.HelmCharts[0]
+			assert.Equal(t, tt.wantURL, chart.RepositoryURL)
+			assert.Equal(t, tt.wantChartName, chart.ChartName, "drift detection rejects an empty ChartName")
+			assert.Empty(t, chart.ChartVersion)
+			assert.Equal(t, "podinfo", chart.ReleaseName)
+			assert.Equal(t, "podinfo", chart.ReleaseNamespace)
+			assert.Equal(t, "replicaCount: 2", chart.Values)
+
+			assertCondition(t, ss, kcmv1.ServiceSetProfileCondition, metav1.ConditionTrue, kcmv1.ServiceSetProfileReadyReason)
+		})
+	}
+}
+
 func TestEnsureProfileSelfManagementCreatesClusterProfile(t *testing.T) {
 	a, c := newTestAdapter(t, kustomizeTemplate("kust-tmpl"))
 	ss := serviceSetFor(kcmv1.ServiceWithValues{Name: "kust-svc", Namespace: testNamespace, Template: "kust-tmpl"})
